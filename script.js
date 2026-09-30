@@ -1,94 +1,70 @@
-// script.js
-// Mobile Navigation Toggle
-const hamburger = document.querySelector('.hamburger');
-const navMenu = document.querySelector('.nav-menu');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-hamburger.addEventListener('click', () => {
-    navMenu.classList.toggle('active');
-});
+const effectsLayer = document.createElement('div');
+effectsLayer.className = 'effects-layer';
+effectsLayer.setAttribute('aria-hidden', 'true');
+document.body.appendChild(effectsLayer);
 
-// Close mobile menu when clicking on a link
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-        navMenu.classList.remove('active');
+function addEffect(className, x, y, properties = {}) {
+    if (reducedMotion.matches || effectsLayer.childElementCount >= 36) return;
+
+    const effect = document.createElement('span');
+    effect.className = className;
+    effect.style.left = `${x}px`;
+    effect.style.top = `${y}px`;
+
+    Object.entries(properties).forEach(([name, value]) => {
+        effect.style.setProperty(name, value);
+    });
+
+    effectsLayer.appendChild(effect);
+    effect.addEventListener('animationend', () => effect.remove(), { once: true });
+    setTimeout(() => effect.remove(), 1400);
+}
+
+document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('pointermove', event => {
+        if (reducedMotion.matches || event.pointerType === 'touch') return;
+        const bounds = card.getBoundingClientRect();
+        card.style.setProperty('--glow-x', `${event.clientX - bounds.left}px`);
+        card.style.setProperty('--glow-y', `${event.clientY - bounds.top}px`);
     });
 });
 
-// Smooth scrolling
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
+document.addEventListener('click', event => {
+    if (event.detail === 0) return;
+    addEffect('click-ripple', event.clientX, event.clientY);
 });
 
-// Active navigation highlighting
-const sections = document.querySelectorAll('section');
-const navLinks = document.querySelectorAll('.nav-link');
+let previousScroll = window.scrollY;
+let lastParticleTime = 0;
 
 window.addEventListener('scroll', () => {
-    let current = '';
-    
-    sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (pageYOffset >= sectionTop - 200) {
-            current = section.getAttribute('id');
-        }
-    });
+    const currentScroll = window.scrollY;
+    const delta = currentScroll - previousScroll;
+    previousScroll = currentScroll;
 
-    navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href').slice(1) === current) {
-            link.classList.add('active');
-        }
-    });
-});
+    if (reducedMotion.matches || delta === 0) return;
+    const now = performance.now();
+    if (now - lastParticleTime < 110) return;
+    lastParticleTime = now;
 
-// Form submission handler
-document.getElementById('contactForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Get form data
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
-    
-    // Here you can add your form submission logic
-    // For now, just show an alert
-    alert('Thank you for your message! I will get back to you soon.');
-    this.reset();
-    
-    // You can integrate with services like:
-    // - EmailJS
-    // - Formspree
-    // - Your own backend API
-});
+    const direction = delta > 0 ? -1 : 1;
+    const edgeWidth = Math.min(65, window.innerWidth * 0.12);
 
-// Intersection Observer for fade-in animations
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
+    for (let side = 0; side < 2; side++) {
+        const edgeOffset = 8 + Math.random() * edgeWidth;
+        const x = side === 0 ? edgeOffset : window.innerWidth - edgeOffset;
+        const y = window.innerHeight * (0.15 + Math.random() * 0.7);
 
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
-    });
-}, observerOptions);
+        addEffect('scroll-particle', x, y, {
+            '--size': `${3 + Math.random() * 3}px`,
+            '--drift-x': `${(Math.random() - 0.5) * 35}px`,
+            '--drift-y': `${direction * (45 + Math.random() * 65)}px`
+        });
+    }
+}, { passive: true });
 
-// Add fade-in animation to sections
-document.querySelectorAll('.skill-category, .timeline-item, .contact-item').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
+reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) effectsLayer.replaceChildren();
 });
