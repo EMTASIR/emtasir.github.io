@@ -1,3 +1,4 @@
+
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const effectsLayer = document.createElement('div');
