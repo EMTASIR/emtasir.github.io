@@ -103,3 +103,4 @@ reducedMotion.addEventListener('change', () => {
         effectsLayer.replaceChildren();
     }
 });
+
